@@ -6,7 +6,7 @@ services:
     build: .
     container_name: arena-python
     ports:
-      - "5000:5000"
+      - "9002:5000"
     environment:
       - FLASK_HOST=0.0.0.0
       - FLASK_PORT=5000
