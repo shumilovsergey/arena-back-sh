@@ -24,42 +24,50 @@ class TelegramAuth:
             return False, None
 
         try:
-            # Parse init data
-            parsed_data = urllib.parse.parse_qsl(init_data)
-            data_dict = dict(parsed_data)
+            # Alternative implementation based on working GitHub examples
+            from urllib.parse import unquote
+
+            # Parse the query string manually
+            vals = {}
+            for pair in init_data.split('&'):
+                if '=' in pair:
+                    key, value = pair.split('=', 1)
+                    vals[key] = unquote(value)
+
+            print(f"DEBUG: Manual parsed data: {vals}")
 
             # Extract hash
-            received_hash = data_dict.pop('hash', None)
+            received_hash = vals.pop('hash', None)
             if not received_hash:
+                print("DEBUG: No hash found in init data")
                 return False, None
 
-            # Create data check string
-            data_check_string = '\n'.join(
-                f"{key}={value}" for key, value in sorted(data_dict.items())
-            )
+            print(f"DEBUG: Received hash: {received_hash}")
+
+            # Create data check string (exclude hash only, keep signature)
+            data_check_string = '\n'.join(f"{k}={v}" for k, v in sorted(vals.items()))
+
+            print(f"DEBUG: Data check string: {repr(data_check_string)}")
 
             # Generate secret key
-            secret_key = hmac.new(
-                "WebAppData".encode(),
-                bot_token.encode(),
-                hashlib.sha256
-            ).digest()
+            secret_key = hmac.new("WebAppData".encode(), bot_token.encode(), hashlib.sha256).digest()
 
-            # Generate hash
-            calculated_hash = hmac.new(
-                secret_key,
-                data_check_string.encode(),
-                hashlib.sha256
-            ).hexdigest()
+            # Calculate hash
+            calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+
+            print(f"DEBUG: Calculated hash: {calculated_hash}")
+            print(f"DEBUG: Received hash:   {received_hash}")
+            print(f"DEBUG: Hashes match: {hmac.compare_digest(received_hash, calculated_hash)}")
 
             # Verify hash
             is_valid = hmac.compare_digest(received_hash, calculated_hash)
 
             if not is_valid:
+                print("DEBUG: Hash validation failed!")
                 return False, None
 
             # Check auth date (optional - ensure request is recent)
-            auth_date = data_dict.get('auth_date')
+            auth_date = vals.get('auth_date')
             if auth_date:
                 auth_timestamp = int(auth_date)
                 current_timestamp = datetime.utcnow().timestamp()
@@ -70,9 +78,9 @@ class TelegramAuth:
 
             # Parse user data
             user_data = None
-            if 'user' in data_dict:
+            if 'user' in vals:
                 try:
-                    user_data = json.loads(data_dict['user'])
+                    user_data = json.loads(vals['user'])
                 except json.JSONDecodeError:
                     pass
 

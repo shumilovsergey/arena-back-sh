@@ -41,7 +41,11 @@ def create_app():
     app.config['BOT_TOKEN'] = BOT_TOKEN
 
     # Enable CORS for GitHub Pages and development
-    CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+    CORS(app,
+         origins=ALLOWED_ORIGINS,
+         supports_credentials=True,
+         allow_headers=['Content-Type', 'X-Telegram-Init-Data'],
+         methods=['GET', 'POST', 'OPTIONS'])
 
     # Wait for Redis to be available
     print("Waiting for Redis to be available...")
@@ -52,8 +56,8 @@ def create_app():
 
     # Set webhook on startup
     
-    if BOT_TOKEN and WEBHOOK_URL:
-        set_webhook(BOT_TOKEN, WEBHOOK_URL)
+    # if BOT_TOKEN and WEBHOOK_URL:
+    #     set_webhook(BOT_TOKEN, WEBHOOK_URL)
 
     # Register blueprints
     from .routes import api_bp

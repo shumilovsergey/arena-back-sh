@@ -35,6 +35,7 @@ WEBHOOK_URL = os.getenv('WEBHOOK_URL', f'{BACKEND_URL}/api/webhook')
 # CORS Configuration
 ALLOWED_ORIGINS = [
     FRONT_URL,
+    FRONT_URL.rstrip('/'),  # Without trailing slash
     'http://localhost:8080',  # Local development
     'http://127.0.0.1:8080',
     'https://localhost:8080'

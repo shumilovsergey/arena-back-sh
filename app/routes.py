@@ -12,6 +12,22 @@ from .constants import BOT_TOKEN, TELEGRAM_API_BASE
 api_bp = Blueprint('api', __name__)
 
 
+@api_bp.route('/user', methods=['OPTIONS'])
+def user_options():
+    """Handle OPTIONS preflight for /user endpoint"""
+    print("DEBUG: OPTIONS request to /user endpoint")
+    print(f"DEBUG: Origin: {request.headers.get('Origin')}")
+    print(f"DEBUG: Access-Control-Request-Headers: {request.headers.get('Access-Control-Request-Headers')}")
+
+    from flask import Response
+    response = Response()
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin')
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Telegram-Init-Data'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+
 @api_bp.route('/user', methods=['GET'])
 def get_user():
     """Get or create user data"""
@@ -23,11 +39,16 @@ def get_user():
                 'message': 'Please set BOT_TOKEN environment variable'
             }), 500
 
+        # Debug: Log request headers
+        print(f"DEBUG: Request headers: {dict(request.headers)}")
+        print(f"DEBUG: X-Telegram-Init-Data present: {'X-Telegram-Init-Data' in request.headers}")
+
         # Validate authentication
         is_valid, user_data, error_msg = validate_request_auth(
             request, current_app.config['BOT_TOKEN']
         )
 
+        print(f"DEBUG: Auth validation result: is_valid={is_valid}, error_msg={error_msg}")
         if not is_valid:
             return jsonify({'error': error_msg}), 401
 
@@ -36,6 +57,7 @@ def get_user():
         # Check if user exists
         existing_user = UserManager.get_user(telegram_id)
         if existing_user:
+            print(f"DEBUG: Returning existing user: {existing_user}")
             return jsonify({'user': existing_user})
 
         # Create new user
@@ -48,6 +70,7 @@ def get_user():
             language_code=sanitized_user_data.get('language_code', '')
         )
 
+        print(f"DEBUG: Created new user: {new_user}")
         return jsonify({'user': new_user}), 201
 
     except Exception as e:
