@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Backend Flask application
+  backend:
+    build: .
+    container_name: arena-python
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5000
+      - FLASK_DEBUG=false
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - redis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Redis database
+  redis:
+    image: redis:7-alpine
+    container_name: arena-redis
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis_data:/data
+    networks:
+      - redis-network  # Isolated network - only backend can access
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    sysctls:
+      - net.core.somaxconn=1024
+
+networks:
+  # Isolated network for Redis - only backend can access
+  redis-network:
+    driver: bridge
+    name: arena-privat
+
+volumes:
+  # Persistent storage for Redis data
+  redis_data:
+    driver: local
+    name: redis-data
