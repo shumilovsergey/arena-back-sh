@@ -52,8 +52,8 @@ def create_app():
 
     # Set webhook on startup
     
-    # if BOT_TOKEN and WEBHOOK_URL:
-    #     set_webhook(BOT_TOKEN, WEBHOOK_URL)
+    if BOT_TOKEN and WEBHOOK_URL:
+        set_webhook(BOT_TOKEN, WEBHOOK_URL)
 
     # Register blueprints
     from .routes import api_bp
