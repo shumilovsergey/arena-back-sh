@@ -12,8 +12,25 @@ from .constants import BOT_TOKEN, TELEGRAM_API_BASE
 api_bp = Blueprint('api', __name__)
 
 
+@api_bp.route('/user/get_data', methods=['OPTIONS'])
+@api_bp.route('/user/up_data', methods=['OPTIONS'])
+def user_options():
+    """Handle OPTIONS preflight for user endpoints"""
+    print("DEBUG: OPTIONS request to /user endpoint")
+    print(f"DEBUG: Origin: {request.headers.get('Origin')}")
+    print(f"DEBUG: Access-Control-Request-Headers: {request.headers.get('Access-Control-Request-Headers')}")
+
+    from flask import Response
+    response = Response()
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin')
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Telegram-Init-Data'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+
 @api_bp.route('/user/get_data', methods=['POST'])
-def get_user():
+def get_user_data():
     """Get or create user data"""
     try:
         # Debug: Log request headers
@@ -66,7 +83,7 @@ def get_user():
 
 
 @api_bp.route('/user/up_data', methods=['POST'])
-def update_user():
+def update_user_data():
     """Update user data"""
     try:
         # Get request data

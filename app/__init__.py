@@ -8,7 +8,7 @@ from flask import Flask
 from flask_cors import CORS
 from .database import init_redis, wait_for_redis
 from .constants import (
-    SECRET_KEY, REDIS_URL, BOT_TOKEN, WEBHOOK_URL, TELEGRAM_API_BASE, FRONT_URL
+    SECRET_KEY, REDIS_URL, BOT_TOKEN, WEBHOOK_URL, TELEGRAM_API_BASE
 )
 
 
@@ -40,8 +40,7 @@ def create_app():
     app.config['REDIS_URL'] = REDIS_URL
     app.config['BOT_TOKEN'] = BOT_TOKEN
 
-    # CORS configuration for Telegram Mini Apps
-    # Using permissive CORS for Telegram WebApp compatibility
+    # CORS configuration - permissive for Telegram WebApp compatibility
     CORS(app)
 
     # Wait for Redis to be available

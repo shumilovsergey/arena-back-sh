@@ -68,6 +68,15 @@ REDIS_URL = f"redis://{REDIS_CONTAINER_NAME}:{REDIS_PORT}/0"
 # Optional Configuration
 SHUMILOV_WEBSITE = os.getenv('SHUMILOV_WEBSITE', 'https://sh-development.ru')
 
+# Development User Bypass Configuration (OPTIONAL)
+ENABLE_DEV_USER = os.getenv('ENABLE_DEV_USER', 'false').lower() == 'true'
+DEV_USER_ID = int(os.getenv('DEV_USER_ID', '999999999'))
+DEV_USER_FIRST_NAME = os.getenv('DEV_USER_FIRST_NAME', 'Dev User')
+DEV_USER_LAST_NAME = os.getenv('DEV_USER_LAST_NAME', 'Template')
+DEV_USER_USERNAME = os.getenv('DEV_USER_USERNAME', 'dev_user')
+DEV_USER_LANGUAGE = os.getenv('DEV_USER_LANGUAGE', 'en')
+DEV_AUTH_HEADER = os.getenv('DEV_AUTH_HEADER', 'dev-user-bypass')
+
 # CORS Configuration Removed - Telegram cryptographic validation provides security
 
 # Telegram API Base URL
@@ -84,3 +93,11 @@ print(f"   Frontend URL: {FRONT_URL}")
 print(f"   Backend URL: {BACKEND_URL}")
 print(f"   Webhook URL: {WEBHOOK_URL}")
 print("🔓 CORS disabled - All origins allowed (Telegram validation provides security)")
+
+if ENABLE_DEV_USER:
+    print("🚧 DEV USER BYPASS ENABLED - Local development mode")
+    print(f"   Dev user ID: {DEV_USER_ID}")
+    print(f"   Dev auth header: X-Dev-Auth: {DEV_AUTH_HEADER}")
+    print("   ⚠️  WARNING: Only use for development/testing!")
+else:
+    print("🔒 Production mode - Telegram authentication required")

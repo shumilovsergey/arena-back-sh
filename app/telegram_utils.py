@@ -210,9 +210,33 @@ def get_user_id_from_request(request):
 
 
 def validate_request_auth(request, bot_token):
-    """Validate request authentication"""
+    """Validate request authentication with optional dev user bypass"""
+    from .constants import (
+        ENABLE_DEV_USER, DEV_AUTH_HEADER, DEV_USER_ID,
+        DEV_USER_FIRST_NAME, DEV_USER_LAST_NAME,
+        DEV_USER_USERNAME, DEV_USER_LANGUAGE
+    )
+
+    # Check for dev user bypass first
+    if ENABLE_DEV_USER:
+        dev_auth = request.headers.get('X-Dev-Auth')
+        if dev_auth == DEV_AUTH_HEADER:
+            print("🚧 DEV USER BYPASS: Using development user")
+            dev_user_data = {
+                'id': DEV_USER_ID,
+                'first_name': DEV_USER_FIRST_NAME,
+                'last_name': DEV_USER_LAST_NAME,
+                'username': DEV_USER_USERNAME,
+                'language_code': DEV_USER_LANGUAGE,
+                'is_dev_user': True  # Flag to identify dev user
+            }
+            return True, dev_user_data, None
+
+    # Standard Telegram authentication
     init_data = request.headers.get('X-Telegram-Init-Data')
     if not init_data:
+        if ENABLE_DEV_USER:
+            return False, None, f"No authentication data provided. For dev bypass, use header: X-Dev-Auth: {DEV_AUTH_HEADER}"
         return False, None, "No authentication data provided"
 
     is_valid, user_data = TelegramAuth.validate_init_data(init_data, bot_token)
