@@ -5,9 +5,10 @@ Flask application factory
 import time
 import requests
 from flask import Flask
+from flask_cors import CORS
 from .database import init_redis, wait_for_redis
 from .constants import (
-    SECRET_KEY, REDIS_URL, BOT_TOKEN, WEBHOOK_URL, TELEGRAM_API_BASE
+    SECRET_KEY, REDIS_URL, BOT_TOKEN, WEBHOOK_URL, TELEGRAM_API_BASE, FRONT_URL
 )
 
 
@@ -39,7 +40,22 @@ def create_app():
     app.config['REDIS_URL'] = REDIS_URL
     app.config['BOT_TOKEN'] = BOT_TOKEN
 
-    # CORS removed - Telegram cryptographic validation provides security
+    # CORS configuration for Telegram Mini Apps
+    # Allow requests from Telegram web platform and configured frontend URL
+    allowed_origins = [
+        "https://web.telegram.org",  # Telegram web platform
+    ]
+
+    # Add frontend URL if configured
+    if FRONT_URL:
+        allowed_origins.append(FRONT_URL)
+
+    # Configure CORS with minimal necessary permissions
+    CORS(app,
+         origins=allowed_origins,
+         allow_headers=["Content-Type", "X-Telegram-Init-Data"],
+         methods=["GET", "POST", "OPTIONS"],
+         supports_credentials=True)
 
     # Wait for Redis to be available
     print("Waiting for Redis to be available...")
