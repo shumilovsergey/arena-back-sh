@@ -7,8 +7,8 @@ This backend provides REST API endpoints for Telegram Mini Apps with secure auth
 ## Base URL
 
 ```
-Production: https://your-backend-domain.com/api
-Development: http://localhost:5000/api
+Production: https://arena-back.sh-development.ru/api
+Development: http://localhost:9002/api
 ```
 
 ## Authentication
@@ -24,14 +24,14 @@ This header contains the cryptographically signed init data from Telegram Web Ap
 
 ## CORS Configuration
 
-The backend is configured with minimal CORS permissions for security:
+The backend is configured with permissive CORS for Telegram WebApp compatibility:
 
-- **Allowed Origins:**
-  - `https://web.telegram.org` (Telegram web platform)
-  - Your configured `FRONTEND_URL` from environment
-- **Allowed Methods:** `GET`, `POST`, `OPTIONS`
-- **Allowed Headers:** `Content-Type`, `X-Telegram-Init-Data`
+- **Allowed Origins:** All origins (`*`) - required for Telegram WebApp environment
+- **Allowed Methods:** All methods
+- **Allowed Headers:** All headers
 - **Credentials:** Supported
+
+**Note:** While CORS is permissive, security is maintained through Telegram's cryptographic validation of init data.
 
 ## API Endpoints
 
@@ -294,7 +294,7 @@ class TelegramAPI {
 }
 
 // Usage
-const api = new TelegramAPI('https://your-backend.com/api');
+const api = new TelegramAPI('https://arena-back.sh-development.ru/api');
 
 // Get user data
 try {
@@ -370,16 +370,17 @@ Create `.env` file with required variables:
 
 ```bash
 # Required
-PROJECT_NAME=your-project-name
-SECRET_KEY=your-secure-secret-key
-BOT_TOKEN=1234567890:ABCDEF...
-FRONTEND_URL=https://your-frontend.com
-BACKEND_URL=https://your-backend.com
-FLASK_PORT=5000
+PROJECT_NAME=arena
+SECRET_KEY=your-secure-secret-key-change-in-production
+BOT_TOKEN=your-telegram-bot-token-here
+FRONTEND_URL=https://shumilovsergey.github.io/arena-front-sh
+BACKEND_URL=https://arena-back.sh-development.ru
+FLASK_PORT=9002
 
 # Optional
 FLASK_DEBUG=false
 SHUMILOV_WEBSITE=https://sh-development.ru
+PYTHONUNBUFFERED=1
 ```
 
 ### Development Commands
@@ -405,10 +406,10 @@ Check if the backend is running:
 
 ```bash
 # Basic health check
-curl http://localhost:5000/health
+curl http://localhost:9002/health
 
 # API health check
-curl http://localhost:5000/api/health
+curl http://localhost:9002/api/health
 
 # Check Docker containers
 docker-compose ps
@@ -426,10 +427,11 @@ docker-compose ps
 
 ### Common Issues
 
-1. **CORS Errors:** Ensure your frontend URL is set in `FRONTEND_URL` environment variable
-2. **Authentication Failures:** Verify `X-Telegram-Init-Data` header is properly set
-3. **Connection Issues:** Check Docker containers are running and healthy
+1. **CORS Errors:** Backend now uses permissive CORS for Telegram WebApp compatibility
+2. **Authentication Failures:** Verify `X-Telegram-Init-Data` header is properly set from Telegram WebApp
+3. **Connection Issues:** Check Docker containers are running and healthy with `docker-compose ps`
 4. **Data Validation:** Ensure `user_data` is valid JSON under 10KB
+5. **Port Issues:** Make sure port 9002 is available and not blocked by firewall
 
 ### Debug Mode
 
@@ -440,3 +442,123 @@ FLASK_DEBUG=true
 ```
 
 This will provide detailed error messages and request logging.
+
+## Arena LoL Project Setup
+
+### Current Configuration
+
+This backend is configured for the Arena LoL Telegram Mini App:
+
+- **Frontend URL:** `https://shumilovsergey.github.io/arena-front-sh`
+- **Backend URL:** `https://arena-back.sh-development.ru`
+- **Local Development Port:** `9002`
+
+### Frontend Integration for Arena LoL
+
+The frontend should use these exact endpoints:
+
+```javascript
+// Production API base URL
+const API_BASE_URL = 'https://arena-back.sh-development.ru/api';
+
+// For local development
+const API_BASE_URL = 'http://localhost:9002/api';
+
+// Example usage in Arena frontend
+class ArenaAPI {
+  constructor() {
+    this.baseURL = API_BASE_URL;
+  }
+
+  async getUserProfile() {
+    const response = await fetch(`${this.baseURL}/user/get_data`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': window.Telegram.WebApp.initData
+      },
+      body: JSON.stringify({})
+    });
+
+    const data = await response.json();
+    return data.user;
+  }
+
+  async saveGameProgress(gameData) {
+    const response = await fetch(`${this.baseURL}/user/up_data`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': window.Telegram.WebApp.initData
+      },
+      body: JSON.stringify({
+        user_data: {
+          ...gameData,
+          last_updated: new Date().toISOString()
+        }
+      })
+    });
+
+    const data = await response.json();
+    return data.user;
+  }
+}
+```
+
+### Arena-Specific Data Structure
+
+For the Arena LoL game, you can store game-specific data in the `user_data` field:
+
+```json
+{
+  "user_data": {
+    "arena": {
+      "level": 15,
+      "experience": 2500,
+      "coins": 1200,
+      "champions": {
+        "owned": ["ashe", "garen", "lux"],
+        "active": "ashe"
+      },
+      "matches": {
+        "total": 45,
+        "wins": 28,
+        "losses": 17
+      },
+      "achievements": ["first_win", "level_10", "champion_master"],
+      "settings": {
+        "sound_enabled": true,
+        "graphics_quality": "high",
+        "auto_battle": false
+      }
+    },
+    "session": {
+      "current_match_id": null,
+      "last_active": "2025-01-15T10:30:00Z",
+      "session_count": 156
+    }
+  }
+}
+```
+
+### CORS Fix Applied
+
+The backend has been updated with permissive CORS settings to resolve the frontend connection issues:
+
+- **Before:** Restrictive CORS with specific origins and headers
+- **After:** Permissive CORS (`CORS(app)`) matching the working Telegram Drive backend
+- **Security:** Maintained through Telegram's cryptographic validation
+
+### Testing the Integration
+
+1. **Backend Status:** Check if backend is running
+   ```bash
+   curl https://arena-back.sh-development.ru/health
+   ```
+
+2. **API Connectivity:** Test API health
+   ```bash
+   curl https://arena-back.sh-development.ru/api/health
+   ```
+
+3. **Frontend Testing:** Open your frontend at `https://shumilovsergey.github.io/arena-front-sh` in Telegram WebApp and check browser dev tools for any remaining errors.

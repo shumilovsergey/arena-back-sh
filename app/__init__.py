@@ -41,21 +41,8 @@ def create_app():
     app.config['BOT_TOKEN'] = BOT_TOKEN
 
     # CORS configuration for Telegram Mini Apps
-    # Allow requests from Telegram web platform and configured frontend URL
-    allowed_origins = [
-        "https://web.telegram.org",  # Telegram web platform
-    ]
-
-    # Add frontend URL if configured
-    if FRONT_URL:
-        allowed_origins.append(FRONT_URL)
-
-    # Configure CORS with minimal necessary permissions
-    CORS(app,
-         origins=allowed_origins,
-         allow_headers=["Content-Type", "X-Telegram-Init-Data"],
-         methods=["GET", "POST", "OPTIONS"],
-         supports_credentials=True)
+    # Using permissive CORS for Telegram WebApp compatibility
+    CORS(app)
 
     # Wait for Redis to be available
     print("Waiting for Redis to be available...")
