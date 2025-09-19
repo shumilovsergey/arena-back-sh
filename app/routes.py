@@ -32,6 +32,10 @@ def user_options():
 def get_user():
     """Get or create user data"""
     try:
+        # Debug: Log request headers
+        print(f"DEBUG: Request headers: {dict(request.headers)}")
+        print(f"DEBUG: X-Telegram-Init-Data present: {'X-Telegram-Init-Data' in request.headers}")
+
         # Check bot token configuration
         if not current_app.config.get('BOT_TOKEN'):
             return jsonify({
@@ -39,16 +43,14 @@ def get_user():
                 'message': 'Please set BOT_TOKEN environment variable'
             }), 500
 
-        # Debug: Log request headers
-        print(f"DEBUG: Request headers: {dict(request.headers)}")
-        print(f"DEBUG: X-Telegram-Init-Data present: {'X-Telegram-Init-Data' in request.headers}")
-
         # Validate authentication
         is_valid, user_data, error_msg = validate_request_auth(
             request, current_app.config['BOT_TOKEN']
         )
 
+        # After authentication validation
         print(f"DEBUG: Auth validation result: is_valid={is_valid}, error_msg={error_msg}")
+
         if not is_valid:
             return jsonify({'error': error_msg}), 401
 
@@ -57,6 +59,7 @@ def get_user():
         # Check if user exists
         existing_user = UserManager.get_user(telegram_id)
         if existing_user:
+            # When returning user data
             print(f"DEBUG: Returning existing user: {existing_user}")
             return jsonify({'user': existing_user})
 

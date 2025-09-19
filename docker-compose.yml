@@ -4,26 +4,28 @@ services:
   # Backend Flask application
   backend:
     build: .
-    container_name: arena-python
+    container_name: ${PROJECT_NAME}-flask
     ports:
-      - "9002:5000"
+      - "${FLASK_PORT}:${FLASK_PORT}"
     environment:
-      - FLASK_HOST=0.0.0.0
-      - FLASK_PORT=5000
-      - FLASK_DEBUG=false
-      - REDIS_URL=redis://redis:6379/0
+      - PROJECT_NAME=${PROJECT_NAME}
+      - FLASK_PORT=${FLASK_PORT}
+      - FLASK_DEBUG=${FLASK_DEBUG}
       - SECRET_KEY=${SECRET_KEY}
       - BOT_TOKEN=${BOT_TOKEN}
       - FRONTEND_URL=${FRONTEND_URL}
-      - PYTHONUNBUFFERED=1
+      - BACKEND_URL=${BACKEND_URL}
+      - SHUMILOV_WEBSITE=${SHUMILOV_WEBSITE}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
     depends_on:
       redis:
         condition: service_healthy
     networks:
-      - redis-network
+      - private-network  # Flask-Redis communication
+      - public-network   # Flask port exposure
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:${FLASK_PORT}/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -32,15 +34,15 @@ services:
   # Redis database
   redis:
     image: redis:7-alpine
-    container_name: arena-redis
-    command: redis-server --appendonly yes --appendfsync everysec
+    container_name: ${PROJECT_NAME}-redis
+    command: redis-server --appendonly yes --appendfsync everysec --port 6379
     volumes:
-      - redis_data:/data
+      - ./redis_data:/data               # Bind mount for data safety
     networks:
-      - redis-network  # Isolated network - only backend can access
+      - private-network  # Only Flask can access Redis
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -49,13 +51,15 @@ services:
       - net.core.somaxconn=1024
 
 networks:
-  # Isolated network for Redis - only backend can access
-  redis-network:
+  # Private network for Flask-Redis communication only
+  private-network:
     driver: bridge
-    name: arena-privat
+    name: ${PROJECT_NAME}-private-network
+    internal: true  # No external access
 
-volumes:
-  # Persistent storage for Redis data
-  redis_data:
-    driver: local
-    name: redis-data
+  # Public network for Flask port exposure
+  public-network:
+    driver: bridge
+    name: ${PROJECT_NAME}-public-network
+
+# No volumes section needed - using bind mount for Redis data

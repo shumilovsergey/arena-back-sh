@@ -1,80 +1,86 @@
 """
 Application constants loaded from environment variables
+NO DEFAULT VALUES - All values must be explicitly configured
 """
 
 import os
+import sys
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
+def get_required_env(var_name: str) -> str:
+    """Get required environment variable or exit with error"""
+    value = os.getenv(var_name)
+    if not value or value.startswith('CHANGE-ME'):
+        print(f"❌ ERROR: Required environment variable '{var_name}' is not set or has placeholder value!")
+        print(f"   Please configure '{var_name}' in your .env file")
+        print(f"   Copy .env.example to .env and update all CHANGE-ME values")
+        sys.exit(1)
+    return value
+
+def get_required_env_int(var_name: str) -> int:
+    """Get required environment variable as integer or exit with error"""
+    value = get_required_env(var_name)
+    try:
+        return int(value)
+    except ValueError:
+        print(f"❌ ERROR: Environment variable '{var_name}' must be a valid integer!")
+        print(f"   Current value: '{value}'")
+        sys.exit(1)
+
+def validate_project_name(project_name: str) -> str:
+    """Validate project name format"""
+    if not project_name.replace('-', '').replace('_', '').isalnum():
+        print(f"❌ ERROR: PROJECT_NAME '{project_name}' contains invalid characters!")
+        print("   Use only lowercase letters, numbers, hyphens, and underscores")
+        print("   Examples: myapp, telegram-shop, crypto_bot")
+        sys.exit(1)
+    return project_name.lower()
+
+# Core Configuration (REQUIRED)
+PROJECT_NAME = validate_project_name(get_required_env('PROJECT_NAME'))
+SECRET_KEY = get_required_env('SECRET_KEY')
+BOT_TOKEN = get_required_env('BOT_TOKEN')
+
 # Flask Configuration
-FLASK_HOST = os.getenv('FLASK_HOST', '0.0.0.0')
-FLASK_PORT = int(os.getenv('FLASK_PORT', 5000))
+FLASK_HOST = '0.0.0.0'  # Hardcoded - no need to configure
+FLASK_PORT = get_required_env_int('FLASK_PORT')
 FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Redis Configuration
-REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+# URL Configuration (REQUIRED)
+FRONT_URL = get_required_env('FRONTEND_URL')
+BACKEND_URL = get_required_env('BACKEND_URL')
 
-# Telegram Bot Configuration
-BOT_TOKEN = os.getenv('BOT_TOKEN', '')
+# Auto-generated Docker Configuration
+FLASK_CONTAINER_NAME = f"{PROJECT_NAME}-flask"
+REDIS_CONTAINER_NAME = f"{PROJECT_NAME}-redis"
+PRIVATE_NETWORK_NAME = f"{PROJECT_NAME}-private-network"
+PUBLIC_NETWORK_NAME = f"{PROJECT_NAME}-public-network"
+REDIS_VOLUME_NAME = f"{PROJECT_NAME}-redis-data"
 
-# Frontend URL Configuration
-FRONT_URL = os.getenv('FRONTEND_URL', 'https://yourusername.github.io')
+# Auto-generated URLs and Ports
+WEBHOOK_URL = f"{BACKEND_URL}/api/webhook"
+REDIS_PORT = 6379  # Hardcoded - isolated in container, no conflicts possible
+REDIS_URL = f"redis://{REDIS_CONTAINER_NAME}:{REDIS_PORT}/0"
 
-# Backend URL Configuration
-BACKEND_URL = os.getenv('BACKEND_URL', 'https://your-backend-domain.com')
-
-# Personal Website Configuration
+# Optional Configuration
 SHUMILOV_WEBSITE = os.getenv('SHUMILOV_WEBSITE', 'https://sh-development.ru')
 
-# Webhook Configuration
-WEBHOOK_URL = os.getenv('WEBHOOK_URL', f'{BACKEND_URL}/api/webhook')
-
-# CORS Configuration
-ALLOWED_ORIGINS = [
-    FRONT_URL,
-    FRONT_URL.rstrip('/'),  # Without trailing slash
-    'http://localhost:8080',  # Local development
-    'http://127.0.0.1:8080',
-    'https://localhost:8080'
-]
+# CORS Configuration Removed - Telegram cryptographic validation provides security
 
 # Telegram API Base URL
-TELEGRAM_API_BASE = f"https://api.telegram.org/bot{BOT_TOKEN}" if BOT_TOKEN else ""
+TELEGRAM_API_BASE = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-# Validation
-def validate_constants():
-    """Validate required constants are set"""
-    required_vars = {
-        'BOT_TOKEN': BOT_TOKEN,
-        'SECRET_KEY': SECRET_KEY,
-    }
-
-    default_vars = {
-        'FRONT_URL': FRONT_URL,
-        'BACKEND_URL': BACKEND_URL
-    }
-
-    # Check for missing required variables
-    missing = [name for name, value in required_vars.items() if not value]
-
-    # Check for default placeholder values
-    default_placeholders = [
-        name for name, value in default_vars.items()
-        if 'yourusername.github.io' in value or 'your-backend-domain.com' in value or 'sh-development.ru' in value
-    ]
-
-    if missing:
-        print(f"Error: Missing required variables: {', '.join(missing)}")
-        print("Please check your .env file configuration")
-
-    if default_placeholders:
-        print(f"Warning: Using default placeholder values for: {', '.join(default_placeholders)}")
-        print("Please update these in your .env file for production")
-
-    return len(missing) == 0
-
-# Validate on import
-validate_constants()
+print("✅ All environment variables validated successfully!")
+print(f"   Project: {PROJECT_NAME}")
+print(f"   Flask container: {FLASK_CONTAINER_NAME} (exposed port: {FLASK_PORT})")
+print(f"   Redis container: {REDIS_CONTAINER_NAME} (internal port: {REDIS_PORT})")
+print(f"   Private network: {PRIVATE_NETWORK_NAME}")
+print(f"   Public network: {PUBLIC_NETWORK_NAME}")
+print(f"   Volume: {REDIS_VOLUME_NAME}")
+print(f"   Frontend URL: {FRONT_URL}")
+print(f"   Backend URL: {BACKEND_URL}")
+print(f"   Webhook URL: {WEBHOOK_URL}")
+print("🔓 CORS disabled - All origins allowed (Telegram validation provides security)")
