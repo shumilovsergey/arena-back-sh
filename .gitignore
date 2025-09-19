@@ -1,4 +1,6 @@
 .env
 data
 
-redis_data
+redis_data/
+
+redis_data/dump.rdb
