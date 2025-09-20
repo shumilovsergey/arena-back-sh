@@ -6,7 +6,11 @@ from flask import Blueprint, request, jsonify, current_app
 from .database import UserManager, check_redis_health
 from .telegram_utils import validate_request_auth, TelegramValidator, validate_telegram_webhook
 from .bot_logic import TelegramBot, BotMessageHandler
-from .constants import BOT_TOKEN, TELEGRAM_API_BASE
+from .constants import (
+    BOT_TOKEN, TELEGRAM_API_BASE,
+    DEV_USER_ID, DEV_USER_FIRST_NAME, DEV_USER_LAST_NAME,
+    DEV_USER_USERNAME, DEV_USER_LANGUAGE
+)
 
 
 api_bp = Blueprint('api', __name__)
@@ -75,7 +79,7 @@ def get_user_data():
         )
 
         print(f"DEBUG: Created new user: {new_user}")
-        return jsonify({'user': new_user}), 201
+        return jsonify({'user': new_user})
 
     except Exception as e:
         print(f"Error in get_user: {e}")
@@ -198,5 +202,109 @@ def webhook():
     except Exception as e:
         print(f"Webhook error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+
+# Development routes - NO CORS, NO AUTH, HARDCODED DEV USER
+@api_bp.route('/dev/get_data', methods=['POST', 'GET', 'OPTIONS'])
+def dev_get_user_data():
+    """Get or create dev user data - NO CORS, NO AUTH"""
+    try:
+        print("DEBUG: Dev route /dev/get_data accessed")
+
+        # Handle OPTIONS for CORS preflight
+        if request.method == 'OPTIONS':
+            from flask import Response
+            response = Response()
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+            return response
+
+        # Use hardcoded dev user ID for security
+        telegram_id = DEV_USER_ID
+
+        # Check if dev user exists
+        existing_user = UserManager.get_user(telegram_id)
+        if existing_user:
+            print(f"DEBUG: Returning existing dev user: {existing_user}")
+            response = jsonify({'user': existing_user})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response
+
+        # Create new dev user
+        new_user = UserManager.create_user(
+            telegram_id=telegram_id,
+            first_name=DEV_USER_FIRST_NAME,
+            last_name=DEV_USER_LAST_NAME,
+            username=DEV_USER_USERNAME,
+            language_code=DEV_USER_LANGUAGE
+        )
+
+        print(f"DEBUG: Created new dev user: {new_user}")
+        response = jsonify({'user': new_user})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
+    except Exception as e:
+        print(f"Error in dev_get_user: {e}")
+        response = jsonify({'error': 'Internal server error'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response, 500
+
+
+@api_bp.route('/dev/up_data', methods=['POST', 'OPTIONS'])
+def dev_update_user_data():
+    """Update dev user data - NO CORS, NO AUTH"""
+    try:
+        print("DEBUG: Dev route /dev/up_data accessed")
+
+        # Handle OPTIONS for CORS preflight
+        if request.method == 'OPTIONS':
+            from flask import Response
+            response = Response()
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+            return response
+
+        # Get request data
+        update_data = request.get_json()
+        if not update_data:
+            response = jsonify({'error': 'No data provided'})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 400
+
+        # Validate update data
+        is_valid, validation_msg = TelegramValidator.validate_user_update_data(update_data)
+        if not is_valid:
+            response = jsonify({'error': validation_msg})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 400
+
+        # Use hardcoded dev user ID for security
+        telegram_id = DEV_USER_ID
+
+        # Check if dev user exists
+        if not UserManager.user_exists(telegram_id):
+            response = jsonify({'error': 'Dev user not found'})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 404
+
+        # Update dev user
+        updated_user = UserManager.update_user(telegram_id, update_data)
+        if not updated_user:
+            response = jsonify({'error': 'Failed to update dev user'})
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 500
+
+        response = jsonify({'user': updated_user})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
+    except Exception as e:
+        print(f"Error in dev_update_user: {e}")
+        response = jsonify({'error': 'Internal server error'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response, 500
 
 
